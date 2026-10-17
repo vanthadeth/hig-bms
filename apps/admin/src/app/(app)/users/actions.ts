@@ -10,6 +10,10 @@ import { EMAIL_RE, USERNAME_RE, optStr, str } from "@/lib/validation";
 export type FormState = ActionResult | undefined;
 
 const GENDERS = ["male", "female", "other"];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** 23514 on a profile = the reporting line would form a loop. */
+const profileError = (e: { code?: string; message: string }): FormState => ({ ok: false, error: e.code === "23514" ? "REPORTS_LOOP" : e.message });
 
 function profileFields(fd: FormData) {
   const gender = str(fd, "gender");
@@ -27,6 +31,7 @@ function profileFields(fd: FormData) {
     emergency_contact_name: optStr(fd, "emergency_contact_name"),
     emergency_contact_phone: optStr(fd, "emergency_contact_phone"),
     locale: locale === "en" ? "en" : "km",
+    reports_to: UUID_RE.test(str(fd, "reports_to")) ? str(fd, "reports_to") : null,
   };
 }
 
@@ -58,7 +63,7 @@ export async function createUser(_prev: FormState, fd: FormData): Promise<FormSt
   // The auth trigger created core.users + an empty profile; complete the profile.
   const supabase = await createClient();
   const { error: pErr } = await supabase.from("user_profiles").update(fields).eq("user_id", data.user.id);
-  if (pErr) return { ok: false, error: pErr.message };
+  if (pErr) return profileError(pErr);
 
   revalidatePath("/users");
   redirect(`/users/${data.user.id}`);
@@ -79,8 +84,9 @@ export async function updateUser(userId: string, _prev: FormState, fd: FormData)
     .update({ username, phone: optStr(fd, "phone") })
     .eq("id", userId);
   if (uErr) return { ok: false, error: uErr.message };
+  if (fields.reports_to === userId) return { ok: false, error: "REPORTS_LOOP" };
   const { error: pErr } = await supabase.from("user_profiles").update(fields).eq("user_id", userId);
-  if (pErr) return { ok: false, error: pErr.message };
+  if (pErr) return profileError(pErr);
 
   revalidatePath(`/users/${userId}`);
   revalidatePath("/users");

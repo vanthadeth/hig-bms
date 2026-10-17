@@ -2,15 +2,13 @@ import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
 import { can, getPermissions, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getModules, getScopes } from "@/lib/catalog";
+import { buildPermissionCatalog } from "@/lib/permission-catalog";
+import { getManagerOptions } from "@/lib/managers";
 import { getT } from "@/i18n/server";
-import { moduleName, appLabel } from "@/i18n/module-name";
-import type { MessageKey } from "@/i18n/messages";
 import { Avatar, BackLink, Card, StatusPill, Tabs } from "@/components/ui";
 import { CardSkeleton, Loading, MatrixSkeleton, Skeleton } from "@/components/skeleton";
-import { MatrixLazy } from "@/components/matrix-lazy";
-import type { MatrixGroup } from "@/components/permission-matrix";
-import { IconCheck, IconDot } from "@/components/shell/icons";
+import { PermissionEditorLazy } from "@/components/matrix-lazy";
+import { EffectiveView, type EffectiveRow } from "@/components/effective-view";
 import { setUserPermissions, type PermState } from "@/app/permission-actions";
 import { UserForm } from "../user-form";
 import { updateUser } from "../actions";
@@ -105,7 +103,7 @@ async function UserHeader({ id, canEdit }: { id: string; canEdit: boolean }) {
 }
 
 async function ProfileTab({ id, canEdit }: { id: string; canEdit: boolean }) {
-  const rec = await getUserRecord(id);
+  const [rec, managers] = await Promise.all([getUserRecord(id), getManagerOptions()]);
   if (!rec) notFound();
   const { user, profile } = rec;
   return (
@@ -113,6 +111,8 @@ async function ProfileTab({ id, canEdit }: { id: string; canEdit: boolean }) {
       mode="edit"
       canEdit={canEdit}
       action={updateUser.bind(null, id)}
+      managers={managers}
+      selfId={id}
       defaults={{ email: user.email ?? "", username: user.username, phone: user.phone, ...profile }}
     />
   );
@@ -136,75 +136,33 @@ async function RolesTab({ userId }: { userId: string }) {
 async function AccessTab({ userId }: { userId: string }) {
   const { t } = await getT();
   const supabase = await createClient();
-  const [modules, scopes, { data: overrides }, { data: effective }, canEdit] = await Promise.all([
-    getModules(),
-    getScopes(),
-    supabase.from("user_permissions").select("module_id, scope, allowed").eq("user_id", userId),
+  const [{ groups, scopes }, { data: overrides }, { data: effective }, canEdit] = await Promise.all([
+    buildPermissionCatalog(t),
+    supabase.from("user_permissions").select("module_id, action, allowed, scope").eq("user_id", userId),
     supabase.rpc("effective_permissions", { p_user: userId }),
     can("admin.permissions", "update"),
   ]);
 
-  const groups: MatrixGroup[] = [];
-  for (const m of modules) {
-    let g = groups.find((x) => x.app === m.app);
-    if (!g) groups.push((g = { app: m.app, label: appLabel(m.app), modules: [] }));
-    g.modules.push({ id: m.id, code: m.code, name: moduleName(t, m.code, m.name) });
-  }
   const initial: Record<string, PermState> = {};
-  for (const o of overrides ?? []) initial[`${o.module_id}:${o.scope}`] = o.allowed ? "allowed" : "denied";
+  for (const o of overrides ?? []) initial[`${o.module_id}:${o.action}`] = !o.allowed ? "denied" : ((o.scope as PermState | null) ?? "allowed");
 
-  const eff = new Map<string, { allowed: boolean; source: string }>();
-  for (const e of (effective ?? []) as { module_code: string; scope: string; allowed: boolean; source: string }[]) eff.set(`${e.module_code}:${e.scope}`, e);
+  const eff = new Map<string, EffectiveRow>();
+  for (const e of (effective ?? []) as { module_code: string; action: string; allowed: boolean; scope: string | null; source: string }[]) {
+    eff.set(`${e.module_code}:${e.action}`, { allowed: e.allowed, scope: e.scope, source: e.source });
+  }
 
   return (
     <div className="stack-lg">
       <div>
         <h2 style={{ margin: "0 0 2px", fontSize: 18, fontWeight: 650 }}>{t("users.overrides")}</h2>
         <p style={{ margin: "0 0 12px", color: "var(--fg-3)" }}>{t("users.overridesHint")}</p>
-        <MatrixLazy groups={groups} scopes={scopes} initial={initial} disabled={!canEdit} onChange={setUserPermissions.bind(null, userId)} />
+        <PermissionEditorLazy groups={groups} scopes={scopes} initial={initial} disabled={!canEdit} onChange={setUserPermissions.bind(null, userId)} />
       </div>
 
       <div>
         <h2 style={{ margin: "0 0 2px", fontSize: 18, fontWeight: 650 }}>{t("users.effective")}</h2>
         <p style={{ margin: "0 0 12px", color: "var(--fg-3)" }}>{t("users.effectiveHint")}</p>
-        <div className="card" style={{ overflow: "clip" }}>
-          <div className="pm-head" aria-hidden>
-            <span>{t("perm.module")}</span>
-            {scopes.map((s) => (
-              <span key={s.code}>{t(`scope.${s.code}` as MessageKey)}</span>
-            ))}
-          </div>
-          {groups.map((g) => (
-            <div key={g.app}>
-              <div className="pm-group">{g.label}</div>
-              {g.modules.map((m) => (
-                <div key={m.id} className="pm-mod">
-                  <div className="pm-name">
-                    <div>
-                      <b>{m.name}</b>
-                      <small>{m.code}</small>
-                    </div>
-                  </div>
-                  <div className="pm-cells">
-                    {scopes.map((s) => {
-                      const e = eff.get(`${m.code}:${s.code}`);
-                      const on = !!e?.allowed;
-                      const label = t(`scope.${s.code}` as MessageKey);
-                      return (
-                        <span key={s.code} className="pm-cell" data-s={on ? "a" : "i"} title={e ? t(`perm.source.${e.source}` as MessageKey) : undefined}>
-                          {on ? <IconCheck /> : <IconDot />}
-                          <span className="pm-label">{label}</span>
-                          {e?.source === "user" && <sup style={{ color: "var(--accent)", fontWeight: 700 }}>*</sup>}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-          <p style={{ margin: 0, padding: "10px 16px", borderTop: "1px solid var(--line)", color: "var(--fg-3)", fontSize: 13 }}>* {t("perm.source.user")}</p>
-        </div>
+        <EffectiveView groups={groups} scopes={scopes} effective={eff} t={t} />
       </div>
     </div>
   );

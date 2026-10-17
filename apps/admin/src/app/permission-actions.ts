@@ -4,12 +4,21 @@ import { revalidatePath } from "next/cache";
 import { authorize, type ActionResult } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export type PermState = "allowed" | "denied" | "inherit";
-export type PermEntry = { moduleId: string; scope: string; state: PermState };
+/**
+ * One cell of the permission grid:
+ *   inherit  not set (the row is removed)
+ *   denied   explicitly denied
+ *   allowed  allowed, for an action that takes no scope
+ *   own | team | all   allowed, with that reach (for an action that takes a scope)
+ * The database checks the choice against what the module declares (core.module_actions).
+ */
+export type PermState = "inherit" | "denied" | "allowed" | "own" | "team" | "all";
+export type PermEntry = { moduleId: string; action: string; state: PermState };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SCOPE_RE = /^[a-z][a-z0-9_]*$/;
-const STATES = new Set<PermState>(["allowed", "denied", "inherit"]);
+const ACTION_RE = /^[a-z][a-z0-9_]*$/;
+const STATES = new Set<PermState>(["inherit", "denied", "allowed", "own", "team", "all"]);
+const SCOPES = new Set<PermState>(["own", "team", "all"]);
 const MAX_ENTRIES = 300;
 
 function valid(entries: PermEntry[]): boolean {
@@ -17,26 +26,37 @@ function valid(entries: PermEntry[]): boolean {
     Array.isArray(entries) &&
     entries.length > 0 &&
     entries.length <= MAX_ENTRIES &&
-    entries.every((e) => UUID_RE.test(e.moduleId) && SCOPE_RE.test(e.scope) && STATES.has(e.state))
+    entries.every((e) => UUID_RE.test(e.moduleId) && ACTION_RE.test(e.action) && STATES.has(e.state))
   );
 }
 
-/** One upsert for every allowed/denied entry, one delete per module for every "not set" entry. */
+function fail(error: { code?: string; message: string }): ActionResult {
+  // 23514 = the module does not allow this choice (e.g. a scope on an action that takes none)
+  return { ok: false, error: error.code === "23514" ? "INVALID_SCOPE" : error.message };
+}
+
+/** One upsert for every grant, one delete per module for every "not set" entry. */
 async function writeMany(table: "role_permissions" | "user_permissions", ownerCol: "role_id" | "user_id", ownerId: string, entries: PermEntry[]) {
   const supabase = await createClient();
 
   const rows = entries
     .filter((e) => e.state !== "inherit")
-    .map((e) => ({ [ownerCol]: ownerId, module_id: e.moduleId, scope: e.scope, allowed: e.state === "allowed" }));
+    .map((e) => ({
+      [ownerCol]: ownerId,
+      module_id: e.moduleId,
+      action: e.action,
+      allowed: e.state !== "denied",
+      scope: SCOPES.has(e.state) ? e.state : null,
+    }));
   if (rows.length) {
-    const { error } = await supabase.from(table).upsert(rows, { onConflict: `${ownerCol},module_id,scope` });
+    const { error } = await supabase.from(table).upsert(rows, { onConflict: `${ownerCol},module_id,action` });
     if (error) return error;
   }
 
   const clears = new Map<string, string[]>();
-  for (const e of entries) if (e.state === "inherit") clears.set(e.moduleId, [...(clears.get(e.moduleId) ?? []), e.scope]);
+  for (const e of entries) if (e.state === "inherit") clears.set(e.moduleId, [...(clears.get(e.moduleId) ?? []), e.action]);
   const results = await Promise.all(
-    [...clears].map(([moduleId, scopes]) => supabase.from(table).delete().eq(ownerCol, ownerId).eq("module_id", moduleId).in("scope", scopes)),
+    [...clears].map(([moduleId, actions]) => supabase.from(table).delete().eq(ownerCol, ownerId).eq("module_id", moduleId).in("action", actions)),
   );
   return results.find((r) => r.error)?.error ?? null;
 }
@@ -52,7 +72,7 @@ export async function setRolePermissions(roleId: string, entries: PermEntry[]): 
   if (role.is_system) return { ok: false, error: "SYSTEM_ROLE" };
 
   const error = await writeMany("role_permissions", "role_id", roleId, entries);
-  if (error) return { ok: false, error: error.message };
+  if (error) return fail(error);
   revalidatePath(`/roles/${roleId}`);
   return { ok: true };
 }
@@ -71,7 +91,7 @@ export async function setUserPermissions(userId: string, entries: PermEntry[]): 
   }
 
   const error = await writeMany("user_permissions", "user_id", userId, entries);
-  if (error) return { ok: false, error: error.message };
+  if (error) return fail(error);
   revalidatePath(`/users/${userId}`);
   return { ok: true };
 }

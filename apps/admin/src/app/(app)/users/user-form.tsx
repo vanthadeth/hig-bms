@@ -22,18 +22,25 @@ export type UserDefaults = {
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
   locale?: string;
+  reports_to?: string | null;
 };
+
+export type ManagerOption = { id: string; name: string };
 
 export function UserForm({
   mode,
   defaults = {},
   action,
   canEdit = true,
+  managers = [],
+  selfId,
 }: {
   mode: "create" | "edit";
   defaults?: UserDefaults;
   action: (prev: FormState, fd: FormData) => Promise<FormState>;
   canEdit?: boolean;
+  managers?: ManagerOption[];
+  selfId?: string;
 }) {
   const { t } = useT();
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -81,6 +88,16 @@ export function UserForm({
             <Field label={t("users.department")}>
               <input className="input" name="department" defaultValue={d.department ?? ""} />
             </Field>
+            <div className="form-span">
+              <Field label={t("users.reportsTo")} hint={t("users.reportsToHint")}>
+                <select className="select" name="reports_to" defaultValue={defaults.reports_to ?? ""}>
+                  <option value="">{t("users.noManager")}</option>
+                  {managers.filter((m) => m.id !== selfId).map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
             <Field label={t("users.hireDate")}>
               <input className="input" name="hire_date" type="date" defaultValue={d.hire_date ?? ""} />
             </Field>

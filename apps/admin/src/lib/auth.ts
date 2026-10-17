@@ -33,26 +33,26 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   };
 });
 
-/** Resolved permissions of the current user as "module:scope" keys. */
+/** Resolved permissions of the current user as "module:action" keys (any scope). */
 export const getPermissions = cache(async (): Promise<Set<string>> => {
   const supabase = await createClient();
   const { data } = await supabase.rpc("effective_permissions");
   const set = new Set<string>();
-  for (const p of (data ?? []) as { module_code: string; scope: string; allowed: boolean }[]) {
-    if (p.allowed) set.add(`${p.module_code}:${p.scope}`);
+  for (const p of (data ?? []) as { module_code: string; action: string; allowed: boolean; scope: string | null }[]) {
+    if (p.allowed) set.add(`${p.module_code}:${p.action}`);
   }
   return set;
 });
 
-export async function can(module: string, scope: string): Promise<boolean> {
-  return (await getPermissions()).has(`${module}:${scope}`);
+export async function can(module: string, action: string): Promise<boolean> {
+  return (await getPermissions()).has(`${module}:${action}`);
 }
 
 /** For pages: redirect when signed out, or to /forbidden when not allowed. */
-export async function requirePermission(module: string, scope: string): Promise<CurrentUser> {
+export async function requirePermission(module: string, action: string): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!(await can(module, scope))) redirect("/forbidden");
+  if (!(await can(module, action))) redirect("/forbidden");
   return user;
 }
 
@@ -61,10 +61,10 @@ export type ActionResult = { ok: true; message?: string } | { ok: false; error: 
 /** For server actions: returns the user or an ActionResult error (never trusts the client). */
 export async function authorize(
   module: string,
-  scope: string,
+  action: string,
 ): Promise<{ user: CurrentUser } | { error: ActionResult & { ok: false } }> {
   const user = await getCurrentUser();
   if (!user) return { error: { ok: false, error: "UNAUTHENTICATED" } };
-  if (!(await can(module, scope))) return { error: { ok: false, error: "FORBIDDEN" } };
+  if (!(await can(module, action))) return { error: { ok: false, error: "FORBIDDEN" } };
   return { user };
 }

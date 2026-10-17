@@ -57,20 +57,21 @@ export function CardSkeleton({ lines = 4 }: { lines?: number }) {
   );
 }
 
-export function MatrixSkeleton({ modules = 4 }: { modules?: number }) {
+export function MatrixSkeleton({ modules = 3 }: { modules?: number }) {
   return (
     <div className="card" aria-hidden>
-      <div className="pm-legend">
-        <Skeleton w={90} h={14} />
-        <Skeleton w={90} h={14} />
-        <Skeleton w={120} h={14} />
+      <div style={{ padding: "14px 16px" }}>
+        <Skeleton w="55%" h={14} />
       </div>
       {Array.from({ length: modules }).map((_, i) => (
-        <div key={i} className="pm-mod">
-          <Skeleton w="40%" h={16} />
-          <div className="pm-cells">
-            {Array.from({ length: 6 }).map((__, j) => (
-              <Skeleton key={j} h={46} style={{ borderRadius: 11 }} />
+        <div key={i} className="pe-mod">
+          <Skeleton w="38%" h={16} />
+          <div className="pe-rows">
+            {Array.from({ length: 3 }).map((__, j) => (
+              <div key={j} className="pe-row">
+                <Skeleton w={70} h={14} />
+                <Skeleton h={46} style={{ borderRadius: 12 }} />
+              </div>
             ))}
           </div>
         </div>

@@ -2,13 +2,11 @@ import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
 import { can, getPermissions, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getModules, getScopes } from "@/lib/catalog";
+import { buildPermissionCatalog } from "@/lib/permission-catalog";
 import { getT } from "@/i18n/server";
-import { appLabel, moduleName } from "@/i18n/module-name";
 import { BackLink, Tabs } from "@/components/ui";
 import { CardSkeleton, Loading, MatrixSkeleton, Skeleton } from "@/components/skeleton";
-import { MatrixLazy } from "@/components/matrix-lazy";
-import type { MatrixGroup } from "@/components/permission-matrix";
+import { PermissionEditorLazy } from "@/components/matrix-lazy";
 import { IconLock } from "@/components/shell/icons";
 import { setRolePermissions, type PermState } from "@/app/permission-actions";
 import { RoleForm, DeleteRoleButton } from "../role-form";
@@ -108,23 +106,16 @@ async function DetailsTab({ id }: { id: string }) {
 async function PermissionsTab({ roleId }: { roleId: string }) {
   const { t } = await getT();
   const supabase = await createClient();
-  const [modules, scopes, { data: perms }, role, allowed] = await Promise.all([
-    getModules(),
-    getScopes(),
-    supabase.from("role_permissions").select("module_id, scope, allowed").eq("role_id", roleId),
+  const [{ groups, scopes }, { data: perms }, role, allowed] = await Promise.all([
+    buildPermissionCatalog(t),
+    supabase.from("role_permissions").select("module_id, action, allowed, scope").eq("role_id", roleId),
     getRole(roleId),
     can("admin.permissions", "update"),
   ]);
   const disabled = !role || role.is_system || !allowed;
 
-  const groups: MatrixGroup[] = [];
-  for (const m of modules) {
-    let g = groups.find((x) => x.app === m.app);
-    if (!g) groups.push((g = { app: m.app, label: appLabel(m.app), modules: [] }));
-    g.modules.push({ id: m.id, code: m.code, name: moduleName(t, m.code, m.name) });
-  }
   const initial: Record<string, PermState> = {};
-  for (const p of perms ?? []) initial[`${p.module_id}:${p.scope}`] = p.allowed ? "allowed" : "denied";
+  for (const p of perms ?? []) initial[`${p.module_id}:${p.action}`] = !p.allowed ? "denied" : ((p.scope as PermState | null) ?? "allowed");
 
-  return <MatrixLazy groups={groups} scopes={scopes} initial={initial} disabled={disabled} onChange={setRolePermissions.bind(null, roleId)} />;
+  return <PermissionEditorLazy groups={groups} scopes={scopes} initial={initial} disabled={disabled} onChange={setRolePermissions.bind(null, roleId)} />;
 }

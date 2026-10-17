@@ -12,6 +12,8 @@ const MAP: Record<string, MessageKey> = {
   INVALID_USERNAME: "users.usernameInvalid",
   INVALID_EMAIL: "users.emailInvalid",
   DUPLICATE: "roles.duplicate",
+  INVALID_SCOPE: "perm.invalid",
+  REPORTS_LOOP: "users.loop",
   SAVED: "common.saved",
 };
 
