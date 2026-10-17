@@ -20,6 +20,6 @@ for _ in $(seq 20); do "$PGBIN/pg_isready" -q && break; sleep 0.5; done
 "$PGBIN/psql" -q -c "create database t" postgres
 
 FILES=(-f tests/00_stub_auth.sql)
-for f in migrations/*.sql; do FILES+=(-f "$f"); done
+if [ -n "${SETUP_FILE:-}" ]; then FILES+=(-f "$SETUP_FILE"); else for f in migrations/*.sql; do FILES+=(-f "$f"); done; fi
 FILES+=(-f tests/permissions_test.sql)
 "$PGBIN/psql" -q -t -A -d t -v ON_ERROR_STOP=1 "${FILES[@]}" 2>&1 | grep -E 'ok  |FAIL|ERROR|PASSED'
