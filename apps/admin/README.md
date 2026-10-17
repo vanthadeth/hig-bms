@@ -21,3 +21,11 @@ Users, roles and permissions for the HIG system. Next.js 16 (App Router) + Supab
 
 ## Languages
 Khmer (default) and English, switchable in the UI. Strings live in `src/i18n/messages.ts`.
+
+## Deploying to Vercel
+- Import the repo; set **Root Directory** to `apps/admin`.
+- Environment variables (Production, Preview, Development):
+  `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` (mark **Sensitive**).
+- `NEXT_PUBLIC_*` values are baked in at build time: after changing them, trigger a new deployment.
+- Check a deployment at `/api/health`: it reports which settings are present and whether the
+  Supabase `core` schema is exposed to the Data API.
