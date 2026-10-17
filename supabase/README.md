@@ -33,3 +33,9 @@ select '<auth user id>', id from core.roles where code = 'super_admin';
 psql -d <db> -v ON_ERROR_STOP=1 -f tests/00_stub_auth.sql \
   -f migrations/20261016000001_core_users_roles_permissions.sql -f tests/permissions_test.sql
 ```
+
+## Exposing `core` to the Data API
+The apps talk to the `core` schema through Supabase's Data API, so `core` must be listed in
+**Exposed schemas** (Dashboard -> Integrations -> Data API -> Settings, or Settings -> API).
+If that field is not shown, the Data API may be disabled for the project: enable it first.
+The migrations already grant the needed privileges to `authenticated` and `service_role`.

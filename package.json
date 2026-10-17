@@ -1,0 +1,12 @@
+{
+  "name": "hig-bms",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev:admin": "pnpm --filter admin dev",
+    "build:admin": "pnpm --filter admin build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test:db": "bash supabase/tests/run.sh"
+  }
+}

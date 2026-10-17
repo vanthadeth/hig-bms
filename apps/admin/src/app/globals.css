@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f7f9;
+  --foreground: #14181f;
+  --surface: #ffffff;
+  --border: #dfe3e8;
+  --muted: #5d6673;
+  --accent: #0b5cad;
+  --accent-fg: #ffffff;
+  --ok: #107a43;
+  --ok-bg: #e3f5ea;
+  --bad: #b3261e;
+  --bad-bg: #fbe7e5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e1116;
+    --foreground: #e8ebf0;
+    --surface: #171b22;
+    --border: #2b323d;
+    --muted: #9aa4b2;
+    --accent: #5aa2ec;
+    --accent-fg: #0b1220;
+    --ok: #5fd08f;
+    --ok-bg: #12301f;
+    --bad: #ff8a80;
+    --bad-bg: #3a1815;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-bad: var(--bad);
+  --color-bad-bg: var(--bad-bg);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Khmer glyphs come from the first installed Khmer-capable font. */
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Khmer", "Khmer OS System",
+    "Khmer UI", "Leelawadee UI", sans-serif;
+  line-height: 1.6;
+}
