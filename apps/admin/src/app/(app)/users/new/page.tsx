@@ -1,8 +1,10 @@
 import { requirePermission } from "@/lib/auth";
 import { getT } from "@/i18n/server";
-import { Card, PageHeader } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { UserForm } from "../user-form";
 import { createUser } from "../actions";
+
+export const metadata = { title: "New user" };
 
 export default async function NewUserPage() {
   await requirePermission("admin.users", "create");
@@ -10,9 +12,7 @@ export default async function NewUserPage() {
   return (
     <>
       <PageHeader title={t("users.new")} back={{ href: "/users", label: t("users.title") }} />
-      <Card>
-        <UserForm mode="create" action={createUser} />
-      </Card>
+      <UserForm mode="create" action={createUser} />
     </>
   );
 }

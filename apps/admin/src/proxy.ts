@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = new Set(["/login", "/api/health"]);
+const PUBLIC_PATHS = new Set(["/login", "/api/health", "/offline"]);
 
 // Refreshes the Supabase session cookie and does an optimistic redirect.
 // Real authorization happens in the data layer (src/lib/auth.ts) and RLS.
@@ -51,5 +51,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  // PWA files must be reachable signed-out: browsers fetch the manifest and service worker without credentials.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|brand/|offline|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };

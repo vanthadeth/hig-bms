@@ -1,36 +1,58 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { signIn } from "./actions";
 import { useT } from "@/i18n/client";
-import { LocaleSwitch } from "@/components/locale-switch";
-import { btnCls, Field, inputCls } from "@/components/ui";
+import { Logo } from "@/components/logo";
+import { LocaleSeg } from "@/components/shell/locale-seg";
+import { Field } from "@/components/ui";
 
 export default function LoginPage() {
   const { t } = useT();
   const [state, action, pending] = useActionState(signIn, undefined);
+  const [show, setShow] = useState(false);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <div className="mb-4 flex justify-end">
-        <LocaleSwitch />
+    <main className="center-screen">
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <LocaleSeg />
       </div>
-      <form action={action} className="rounded-lg border border-border bg-surface p-6">
-        <h1 className="mb-1 text-xl font-semibold">{t("app.name")}</h1>
-        <p className="mb-5 text-sm text-muted">{t("login.title")}</p>
-        <div className="space-y-4">
+      <form action={action} className="card auth-card" noValidate={false}>
+        <Logo size={56} />
+        <span className="green-rule" />
+        <h1 style={{ margin: "0 0 4px", fontSize: 28, lineHeight: 1.2, fontWeight: 650, letterSpacing: "-0.015em" }}>{t("login.title")}</h1>
+        <p style={{ margin: "0 0 22px", color: "var(--fg-3)" }}>{t("login.lead")}</p>
+
+        <div className="stack">
           <Field label={t("login.email")}>
-            <input name="email" type="email" autoComplete="username" required className={inputCls} />
+            <input className="input" name="email" type="email" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
           </Field>
           <Field label={t("login.password")}>
-            <input name="password" type="password" autoComplete="current-password" required className={inputCls} />
+            <div style={{ position: "relative" }}>
+              <input
+                className="input"
+                name="password"
+                type={show ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                style={{ paddingRight: 76 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShow((v) => !v)}
+                aria-pressed={show}
+                style={{ position: "absolute", right: 4, top: 4, bottom: 4, minWidth: 64, border: 0, background: "transparent", color: "var(--accent)", fontWeight: 600, borderRadius: 8 }}
+              >
+                {t(show ? "login.hide" : "login.show")}
+              </button>
+            </div>
           </Field>
           {state?.error && (
-            <p role="alert" className="rounded-md bg-bad-bg px-3 py-2 text-sm text-bad">
+            <p role="alert" className="msg msg-bad" style={{ margin: 0 }}>
               {t(state.error === "inactive" ? "login.inactive" : "login.invalid")}
             </p>
           )}
-          <button type="submit" disabled={pending} className={`${btnCls} w-full`}>
+          <button type="submit" disabled={pending} className="btn btn-primary btn-block" style={{ minHeight: 48 }}>
             {t("login.submit")}
           </button>
         </div>

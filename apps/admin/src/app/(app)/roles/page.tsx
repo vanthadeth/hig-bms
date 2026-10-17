@@ -2,7 +2,10 @@ import Link from "next/link";
 import { can, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getT } from "@/i18n/server";
-import { Badge, btnCls, Card, PageHeader } from "@/components/ui";
+import { Fab, HeaderAction, PageHeader, StatusPill } from "@/components/ui";
+import { IconChevron, IconLock } from "@/components/shell/icons";
+
+export const metadata = { title: "Roles" };
 
 export default async function RolesPage() {
   await requirePermission("admin.roles", "view");
@@ -15,42 +18,28 @@ export default async function RolesPage() {
 
   return (
     <>
-      <PageHeader
-        title={t("roles.title")}
-        actions={canCreate ? <Link href="/roles/new" className={btnCls}>{t("roles.new")}</Link> : null}
-      />
-      <Card>
-        {!roles?.length ? (
-          <p className="text-sm text-muted">{t("common.noData")}</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-muted">
-                <th className="py-2 font-medium">{t("common.name")}</th>
-                <th className="py-2 font-medium">{t("common.code")}</th>
-                <th className="py-2 font-medium">{t("roles.members")}</th>
-                <th className="py-2 font-medium">{t("common.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="py-2">
-                    <Link href={`/roles/${r.id}`} className="font-medium text-accent hover:underline">{r.name}</Link>
-                    {r.is_system && <span className="ml-2"><Badge tone="muted">{t("common.system")}</Badge></span>}
-                    {r.description && <div className="text-xs text-muted">{r.description}</div>}
-                  </td>
-                  <td className="py-2 font-mono text-xs">{r.code}</td>
-                  <td className="py-2">{r.user_roles?.[0]?.count ?? 0}</td>
-                  <td className="py-2">
-                    <Badge tone={r.is_active ? "ok" : "muted"}>{t(r.is_active ? "common.active" : "common.inactive")}</Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
+      <PageHeader title={t("roles.title")} lead={t("roles.lead")} actions={canCreate ? <HeaderAction href="/roles/new" label={t("roles.new")} /> : null} />
+      {!roles?.length ? (
+        <div className="card empty"><b>{t("common.loading")}</b></div>
+      ) : (
+        <div className="card" style={{ overflow: "hidden" }}>
+          {roles.map((r) => (
+            <Link key={r.id} href={`/roles/${r.id}`} className="row" style={{ gridTemplateColumns: "minmax(0,1fr) auto auto" }}>
+              <div className="row-main">
+                <b>{r.name}</b>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {r.is_system && <IconLock aria-label={t("common.system")} style={{ flex: "none", color: "var(--warn)" }} />}
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>{r.code}</span>
+                  <span>· {t("roles.members", { n: r.user_roles?.[0]?.count ?? 0 })}</span>
+                </span>
+              </div>
+              <StatusPill active={r.is_active} activeLabel={t("common.active")} inactiveLabel={t("common.inactive")} />
+              <IconChevron className="chev" style={{ display: "block" }} />
+            </Link>
+          ))}
+        </div>
+      )}
+      {canCreate && <Fab href="/roles/new" label={t("roles.new")} />}
     </>
   );
 }

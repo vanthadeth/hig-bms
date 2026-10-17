@@ -1,37 +1,51 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { IconBack, IconPlus } from "@/components/shell/icons";
+import { avatarClass, initials } from "@/lib/avatar";
 
-export const inputCls =
-  "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent";
-export const btnCls =
-  "inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-fg hover:opacity-90 disabled:opacity-50";
-export const btnGhostCls =
-  "inline-flex items-center justify-center rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50";
-export const btnDangerCls =
-  "inline-flex items-center justify-center rounded-md border border-bad px-4 py-2 text-sm font-medium text-bad hover:bg-bad-bg disabled:opacity-50";
-
-export function PageHeader({ title, actions, back }: { title: string; actions?: ReactNode; back?: { href: string; label: string } }) {
+export function PageHeader({
+  title,
+  lead,
+  back,
+  actions,
+}: {
+  title: string;
+  lead?: string;
+  back?: { href: string; label: string };
+  actions?: ReactNode;
+}) {
   return (
-    <div className="mb-6">
+    <>
       {back && (
-        <Link href={back.href} className="text-sm text-muted hover:underline">
-          ← {back.label}
+        <Link href={back.href} className="back">
+          <IconBack /> {back.label}
         </Link>
       )}
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        <div className="flex gap-2">{actions}</div>
+      <div className="page-head">
+        <div style={{ minWidth: 0 }}>
+          <h1>{title}</h1>
+          {lead && <p>{lead}</p>}
+        </div>
+        {actions && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{actions}</div>}
       </div>
-    </div>
+    </>
   );
 }
 
-export function Card({ title, children, hint }: { title?: string; children: ReactNode; hint?: string }) {
+export function BackLink({ href, label }: { href: string; label: string }) {
   return (
-    <section className="mb-6 rounded-lg border border-border bg-surface p-5">
-      {title && <h2 className="mb-1 text-base font-semibold">{title}</h2>}
-      {hint && <p className="mb-4 text-sm text-muted">{hint}</p>}
-      {!hint && title && <div className="mb-3" />}
+    <Link href={href} className="back">
+      <IconBack /> {label}
+    </Link>
+  );
+}
+
+export function Card({ title, hint, children, pad = true }: { title?: string; hint?: string; children: ReactNode; pad?: boolean }) {
+  return (
+    <section className={`card${pad ? " card-pad" : ""}`}>
+      {title && <h2>{title}</h2>}
+      {hint && <p className="card-hint">{hint}</p>}
+      {(title || hint) && <div style={{ height: 14 }} />}
       {children}
     </section>
   );
@@ -39,16 +53,52 @@ export function Card({ title, children, hint }: { title?: string; children: Reac
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium">{label}</span>
+    <label className="field" style={{ display: "block" }}>
+      <span>{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
+      {hint && <small>{hint}</small>}
     </label>
   );
 }
 
-export function Badge({ tone, children }: { tone: "ok" | "bad" | "muted"; children: ReactNode }) {
-  const cls =
-    tone === "ok" ? "bg-ok-bg text-ok" : tone === "bad" ? "bg-bad-bg text-bad" : "bg-background text-muted border border-border";
-  return <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{children}</span>;
+export function StatusPill({ active, activeLabel, inactiveLabel }: { active: boolean; activeLabel: string; inactiveLabel: string }) {
+  return (
+    <span className={`pill ${active ? "pill-ok" : "pill-off"}`}>
+      <i className="dot" />
+      {active ? activeLabel : inactiveLabel}
+    </span>
+  );
+}
+
+export function Avatar({ name, seed, size }: { name: string; seed: string; size?: "sm" | "lg" }) {
+  return <span className={`avatar ${size === "lg" ? "avatar-lg" : size === "sm" ? "avatar-sm" : ""} ${avatarClass(seed)}`}>{initials(name)}</span>;
+}
+
+/** Phone: floating action button above the tab bar. Desktop shows the header button instead. */
+export function Fab({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="fab">
+      <IconPlus /> {label}
+    </Link>
+  );
+}
+
+export function HeaderAction({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="btn btn-primary desktop-only">
+      <IconPlus /> {label}
+    </Link>
+  );
+}
+
+export function Tabs({ items }: { items: { href: string; label: string; active: boolean }[] }) {
+  return (
+    <div className="tabs" role="tablist">
+      {items.map((it) => (
+        <Link key={it.href} href={it.href} replace scroll={false} role="tab" aria-selected={it.active} aria-current={it.active ? "page" : undefined}>
+          {it.label}
+        </Link>
+      ))}
+    </div>
+  );
 }

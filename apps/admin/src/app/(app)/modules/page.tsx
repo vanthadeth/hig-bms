@@ -1,38 +1,40 @@
 import { requirePermission } from "@/lib/auth";
 import { getModules } from "@/lib/catalog";
 import { getT } from "@/i18n/server";
-import { Badge, Card, PageHeader } from "@/components/ui";
+import { appLabel, moduleName } from "@/i18n/module-name";
+import { PageHeader, StatusPill } from "@/components/ui";
+
+export const metadata = { title: "Modules" };
 
 export default async function ModulesPage() {
   await requirePermission("admin.modules", "view");
   const [modules, { t }] = await Promise.all([getModules(), getT()]);
+  const apps = [...new Set(modules.map((m) => m.app))];
+
   return (
     <>
-      <PageHeader title={t("modules.title")} />
-      <Card hint={t("modules.hint")}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted">
-              <th className="py-2 font-medium">{t("common.name")}</th>
-              <th className="py-2 font-medium">{t("common.code")}</th>
-              <th className="py-2 font-medium">{t("modules.app")}</th>
-              <th className="py-2 font-medium">{t("common.status")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {modules.map((m) => (
-              <tr key={m.id} className="border-t border-border">
-                <td className="py-2">{m.name}</td>
-                <td className="py-2 font-mono text-xs">{m.code}</td>
-                <td className="py-2">{m.app}</td>
-                <td className="py-2">
-                  <Badge tone={m.is_active ? "ok" : "muted"}>{t(m.is_active ? "common.active" : "common.inactive")}</Badge>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+      <PageHeader title={t("modules.title")} lead={t("modules.lead")} />
+      <div className="stack-lg">
+        {apps.map((app) => (
+          <div key={app}>
+            <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, color: "var(--fg-3)", margin: "0 2px 8px" }}>{appLabel(app)}</div>
+            <div className="card" style={{ overflow: "hidden" }}>
+              {modules
+                .filter((m) => m.app === app)
+                .map((m) => (
+                  <div key={m.id} className="row" style={{ gridTemplateColumns: "minmax(0,1fr) auto", cursor: "default" }}>
+                    <div className="row-main">
+                      <b>{moduleName(t, m.code, m.name)}</b>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>{m.code}</span>
+                    </div>
+                    <StatusPill active={m.is_active} activeLabel={t("common.active")} inactiveLabel={t("common.inactive")} />
+                  </div>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p style={{ color: "var(--fg-3)", marginTop: 14 }}>{t("modules.hint")}</p>
     </>
   );
 }

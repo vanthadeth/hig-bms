@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useT } from "@/i18n/client";
-import { btnCls, Field, inputCls } from "@/components/ui";
+import { Field } from "@/components/ui";
 import { resultText } from "@/components/error-text";
 import type { FormState } from "./actions";
 
@@ -39,54 +39,53 @@ export function UserForm({
   const [state, formAction, pending] = useActionState(action, undefined);
   const msg = resultText(t, state);
   const d = defaults;
-  const ro = !canEdit;
 
   return (
-    <form action={formAction} className="space-y-6">
-      <fieldset disabled={ro} className="space-y-6">
-        <div>
-          <h3 className="mb-3 text-sm font-semibold text-muted">{t("users.account")}</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
+    <form action={formAction} className="stack-lg">
+      <fieldset disabled={!canEdit} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }} className="stack-lg">
+        <section className="card card-pad">
+          <h2 style={{ marginBottom: 14 }}>{t("users.account")}</h2>
+          <div className="form-grid">
             <Field label={t("users.email")}>
-              <input name="email" type="email" defaultValue={d.email} required readOnly={mode === "edit"} className={inputCls} />
+              <input className="input" name="email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" defaultValue={d.email} required readOnly={mode === "edit"} />
             </Field>
             <Field label={t("users.username")}>
-              <input name="username" defaultValue={d.username} required pattern="[a-z0-9._\-]{3,40}" className={inputCls} />
+              <input className="input" name="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} defaultValue={d.username} required pattern="[a-z0-9._\-]{3,40}" />
             </Field>
             <Field label={t("users.phone")}>
-              <input name="phone" defaultValue={d.phone ?? ""} className={inputCls} />
+              <input className="input" name="phone" type="tel" inputMode="tel" autoComplete="off" defaultValue={d.phone ?? ""} />
             </Field>
             {mode === "create" && (
               <Field label={t("users.password")} hint={t("users.passwordHint")}>
-                <input name="password" type="password" minLength={8} required autoComplete="new-password" className={inputCls} />
+                <input className="input" name="password" type="password" minLength={8} required autoComplete="new-password" />
               </Field>
             )}
           </div>
-        </div>
+        </section>
 
-        <div>
-          <h3 className="mb-3 text-sm font-semibold text-muted">{t("users.profile")}</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <section className="card card-pad">
+          <h2 style={{ marginBottom: 14 }}>{t("users.profile")}</h2>
+          <div className="form-grid">
             <Field label={t("users.fullName")}>
-              <input name="full_name" defaultValue={d.full_name} required className={inputCls} />
+              <input className="input" name="full_name" autoComplete="off" defaultValue={d.full_name} required />
             </Field>
             <Field label={t("users.fullNameKm")}>
-              <input name="full_name_km" defaultValue={d.full_name_km ?? ""} className={inputCls} />
+              <input className="input" name="full_name_km" autoComplete="off" defaultValue={d.full_name_km ?? ""} />
             </Field>
             <Field label={t("users.employeeCode")}>
-              <input name="employee_code" defaultValue={d.employee_code ?? ""} className={inputCls} />
+              <input className="input" name="employee_code" autoCapitalize="characters" defaultValue={d.employee_code ?? ""} />
             </Field>
             <Field label={t("users.position")}>
-              <input name="position" defaultValue={d.position ?? ""} className={inputCls} />
+              <input className="input" name="position" defaultValue={d.position ?? ""} />
             </Field>
             <Field label={t("users.department")}>
-              <input name="department" defaultValue={d.department ?? ""} className={inputCls} />
+              <input className="input" name="department" defaultValue={d.department ?? ""} />
             </Field>
             <Field label={t("users.hireDate")}>
-              <input name="hire_date" type="date" defaultValue={d.hire_date ?? ""} className={inputCls} />
+              <input className="input" name="hire_date" type="date" defaultValue={d.hire_date ?? ""} />
             </Field>
             <Field label={t("users.gender")}>
-              <select name="gender" defaultValue={d.gender ?? ""} className={inputCls}>
+              <select className="select" name="gender" defaultValue={d.gender ?? ""}>
                 <option value="">—</option>
                 <option value="male">{t("users.gender.male")}</option>
                 <option value="female">{t("users.gender.female")}</option>
@@ -94,36 +93,40 @@ export function UserForm({
               </select>
             </Field>
             <Field label={t("users.dob")}>
-              <input name="date_of_birth" type="date" defaultValue={d.date_of_birth ?? ""} className={inputCls} />
+              <input className="input" name="date_of_birth" type="date" defaultValue={d.date_of_birth ?? ""} />
             </Field>
-            <Field label={t("users.address")}>
-              <input name="address" defaultValue={d.address ?? ""} className={inputCls} />
+            <div className="form-span">
+              <Field label={t("users.address")}>
+                <input className="input" name="address" autoComplete="street-address" defaultValue={d.address ?? ""} />
+              </Field>
+            </div>
+            <Field label={t("users.emergencyName")}>
+              <input className="input" name="emergency_contact_name" defaultValue={d.emergency_contact_name ?? ""} />
+            </Field>
+            <Field label={t("users.emergencyPhone")}>
+              <input className="input" name="emergency_contact_phone" type="tel" inputMode="tel" defaultValue={d.emergency_contact_phone ?? ""} />
             </Field>
             <Field label={t("users.locale")}>
-              <select name="locale" defaultValue={d.locale ?? "km"} className={inputCls}>
+              <select className="select" name="locale" defaultValue={d.locale ?? "km"}>
                 <option value="km">ខ្មែរ</option>
                 <option value="en">English</option>
               </select>
             </Field>
-            <Field label={t("users.emergencyName")}>
-              <input name="emergency_contact_name" defaultValue={d.emergency_contact_name ?? ""} className={inputCls} />
-            </Field>
-            <Field label={t("users.emergencyPhone")}>
-              <input name="emergency_contact_phone" defaultValue={d.emergency_contact_phone ?? ""} className={inputCls} />
-            </Field>
           </div>
-        </div>
+        </section>
       </fieldset>
 
       {msg && (
-        <p role="status" className={`rounded-md px-3 py-2 text-sm ${state?.ok ? "bg-ok-bg text-ok" : "bg-bad-bg text-bad"}`}>
+        <p role="status" className={`msg ${state?.ok ? "msg-ok" : "msg-bad"}`} style={{ margin: 0 }}>
           {msg}
         </p>
       )}
-      {!ro && (
-        <button type="submit" disabled={pending} className={btnCls}>
-          {t(mode === "create" ? "common.create" : "common.save")}
-        </button>
+      {canEdit && (
+        <div className="form-actions">
+          <button type="submit" disabled={pending} className="btn btn-primary">
+            {t(mode === "create" ? "common.create" : "common.save")}
+          </button>
+        </div>
       )}
     </form>
   );

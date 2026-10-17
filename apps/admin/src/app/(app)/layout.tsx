@@ -1,55 +1,102 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { getCurrentUser, getPermissions } from "@/lib/auth";
 import { getT } from "@/i18n/server";
-import type { MessageKey } from "@/i18n/messages";
-import { signOut } from "@/app/login/actions";
-import { LocaleSwitch } from "@/components/locale-switch";
+import { Logo } from "@/components/logo";
+import { AccountMenu } from "@/components/shell/account-menu";
+import { RailNav, TabBar, type NavItem } from "@/components/shell/nav-links";
+import { Skeleton } from "@/components/skeleton";
 
-const NAV: { href: string; label: MessageKey; module: string | null }[] = [
-  { href: "/", label: "nav.dashboard", module: null },
-  { href: "/users", label: "nav.users", module: "admin.users" },
-  { href: "/roles", label: "nav.roles", module: "admin.roles" },
-  { href: "/modules", label: "nav.modules", module: "admin.modules" },
+const NAV: (NavItem & { module: string | null })[] = [
+  { href: "/", label: "nav.home", icon: "home", module: null },
+  { href: "/users", label: "nav.users", icon: "users", module: "admin.users" },
+  { href: "/roles", label: "nav.roles", icon: "roles", module: "admin.roles" },
+  { href: "/modules", label: "nav.modules", icon: "modules", module: "admin.modules" },
 ];
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+async function allowedNav(): Promise<NavItem[]> {
   const perms = await getPermissions();
-  const { t } = await getT();
-  const items = NAV.filter((n) => !n.module || perms.has(`${n.module}:view`));
+  return NAV.filter((n) => !n.module || perms.has(`${n.module}:view`)).map((n) => ({ href: n.href, label: n.label, icon: n.icon }));
+}
 
+async function Rail() {
+  return <RailNav items={await allowedNav()} />;
+}
+async function Tabs() {
+  return <TabBar items={await allowedNav()} />;
+}
+async function Account() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  return <AccountMenu name={user.fullName} email={user.email ?? user.username} seed={user.id} />;
+}
+
+function Brand({ sub }: { sub: string }) {
+  // Company name sits in layout text beside the mark; it is never attached to the logo itself.
   return (
-    <div className="min-h-screen md:flex">
-      <aside className="border-b border-border bg-surface md:min-h-screen md:w-60 md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between px-4 py-3 md:block">
-          <div className="text-lg font-semibold">{t("app.name")}</div>
-          <div className="md:mt-3">
-            <LocaleSwitch />
-          </div>
-        </div>
-        <nav className="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:pb-0">
-          {items.map((n) => (
-            <Link key={n.href} href={n.href} className="whitespace-nowrap rounded-md px-3 py-2 text-sm hover:bg-background">
-              {t(n.label)}
-            </Link>
-          ))}
-        </nav>
-        <div className="hidden px-4 py-4 text-sm md:block">
-          <div className="font-medium">{user.fullName}</div>
-          <div className="mb-2 text-xs text-muted">{user.email ?? user.username}</div>
-          <form action={signOut}>
-            <button className="text-accent hover:underline">{t("nav.signOut")}</button>
-          </form>
+    <div className="brand">
+      <Logo size={36} />
+      <div>
+        HIG
+        <small>{sub}</small>
+      </div>
+    </div>
+  );
+}
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const { t } = await getT();
+  return (
+    <div className="shell">
+      <aside className="rail">
+        <Brand sub={t("app.sub")} />
+        <div>
+          <div className="rail-label">{t("nav.section")}</div>
+          <Suspense fallback={<RailSkeleton />}>
+            <Rail />
+          </Suspense>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 p-4 md:p-8">
-        <div className="mx-auto max-w-5xl">{children}</div>
-        <form action={signOut} className="mt-8 md:hidden">
-          <button className="text-sm text-accent hover:underline">{t("nav.signOut")}</button>
-        </form>
-      </main>
+
+      <div style={{ minWidth: 0 }}>
+        <header className="app-bar">
+          <div className="app-bar-inner">
+            <div className="app-bar-brand">
+              <Brand sub={t("app.sub")} />
+            </div>
+            <div style={{ flex: 1 }} />
+            <Suspense fallback={<Skeleton w={34} h={34} circle />}>
+              <Account />
+            </Suspense>
+          </div>
+        </header>
+        <main className="content">{children}</main>
+      </div>
+
+      <Suspense fallback={<TabsSkeleton />}>
+        <Tabs />
+      </Suspense>
+    </div>
+  );
+}
+
+function RailSkeleton() {
+  return (
+    <div style={{ display: "grid", gap: 8, padding: "0 4px" }} aria-hidden>
+      <Skeleton h={38} />
+      <Skeleton h={38} />
+      <Skeleton h={38} />
+    </div>
+  );
+}
+function TabsSkeleton() {
+  return (
+    <div className="tab-bar" aria-hidden>
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="tab">
+          <Skeleton w={54} h={28} style={{ borderRadius: 99 }} />
+          <Skeleton w={36} h={10} />
+        </div>
+      ))}
     </div>
   );
 }
