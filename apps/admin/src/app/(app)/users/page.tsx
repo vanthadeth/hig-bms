@@ -15,7 +15,7 @@ export default async function UsersPage() {
   const [{ data }, canCreate] = await Promise.all([
     supabase
       .from("users")
-      .select("id, username, email, is_active, last_login_at, user_profiles(full_name, full_name_km), user_roles(roles(name))")
+      .select("id, username, email, is_active, last_login_at, user_profiles!user_profiles_user_id_fkey(full_name, full_name_km), user_roles(roles(name))")
       .order("created_at"),
     can("admin.users", "create"),
   ]);

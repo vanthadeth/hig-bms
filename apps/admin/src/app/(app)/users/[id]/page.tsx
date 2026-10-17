@@ -24,7 +24,7 @@ export async function generateMetadata() {
 
 const getUserRecord = cache(async (id: string) => {
   const supabase = await createClient();
-  const { data } = await supabase.from("users").select("*, user_profiles(*)").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("users").select("*, user_profiles!user_profiles_user_id_fkey(*)").eq("id", id).maybeSingle();
   if (!data) return null;
   const profile = Array.isArray(data.user_profiles) ? data.user_profiles[0] : data.user_profiles;
   return { user: data, profile };

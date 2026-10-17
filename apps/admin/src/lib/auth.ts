@@ -17,11 +17,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const uid = data?.claims?.sub;
   if (!uid) return null;
 
-  const { data: row } = await supabase
+  const { data: row, error } = await supabase
     .from("users")
-    .select("id, username, email, is_active, user_profiles(full_name)")
+    .select("id, username, email, is_active, user_profiles!user_profiles_user_id_fkey(full_name)")
     .eq("id", uid)
     .maybeSingle();
+  // A failed query is an outage, not a sign-out: raise it so it is visible instead of bouncing to /login.
+  if (error) throw new Error(`Could not load the signed-in user: ${error.message}`);
   if (!row || !row.is_active) return null;
 
   const profile = Array.isArray(row.user_profiles) ? row.user_profiles[0] : row.user_profiles;
